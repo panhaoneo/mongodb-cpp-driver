@@ -36,6 +36,15 @@ struct NF_MongoDBConf
     {
     }
 
+    void init(const string &hostip, const string &port, const string &username, const string& password, const string &dbname)
+    {
+        _host = hostip;
+        _user = username;
+        _password = password;
+        _port = port;
+        _database = dbname;
+    }
+
     /**
     * @brief 读取数据库配置. 
     * 
@@ -72,24 +81,28 @@ public:
 	CNFMongo(const string &hostip, const string &port, const string &username, const string& password, const string &dbname);
     CNFMongo(const NF_MongoDBConf& nfDbConf);
 	~CNFMongo();
-    int init(const string &hostip, const string &port, const string &username, const string& password, const string &dbname);
-    int init(const NF_MongoDBConf& nfDbConf);
+    void init(const string &hostip, const string &port, const string &username, const string& password, const string &dbname);
+    void init(const NF_MongoDBConf& nfDbConf);
 
-	void connect();
-	void disconnect();
+    void Connect();
 
     enum ValueType
     {
         MONGODB_INT64,
         MONGODB_DOUBLE,
+        MONGODB_STRING,
     };
-    typedef map<string, pair<ValueType, string>> MONGODB_RECORD_DATA;
+    typedef map<string, pair<ValueType, string> > MONGODB_RECORD_DATA;
 
-    size_t UpdateRecord(const string &strAreaDb, const string &collection, const map<string, pair<ValueType, string> > &mapData);
+    int UpdateRecord(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData, const MONGODB_RECORD_DATA &mapFilter);
+
+    int InsertRecord(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData);
 
 private:
-    std::unique_ptr<mongocxx::instance> _instance = nullptr;
-    mongocxx::pool::entry _MongoClient;
+    std::unique_ptr<mongocxx::instance> _instance;
+    bool _bConnect;
+    mongocxx::pool *_pMongoPoolptr;
+    NF_MongoDBConf _dbConf;
 };
 
 #endif
