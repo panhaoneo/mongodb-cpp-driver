@@ -1,4 +1,4 @@
-#include "MongoTest.h"
+#include "Mongo.h"
 
 CNFMongo::CNFMongo()
 {
@@ -109,13 +109,13 @@ bool CNFMongo::try_get_client(mongocxx::stdx::optional<mongocxx::pool::entry>& d
 }
 
 
-void CNFMongo::buildDoc(MONGODB_RECORD_DATA mapData,  bsoncxx::builder::basic::document &doc)
+void CNFMongo::buildDoc(const MONGODB_RECORD_DATA& mapData,  bsoncxx::builder::basic::document &doc)
 {
 	MONGODB_RECORD_DATA::iterator itEnd = mapData.end();
 	for(MONGODB_RECORD_DATA::iterator it=mapData.begin(); it != itEnd; it++)
 	{
 		if(it->second.first == MONGODB_INT32)
-		{
+		{ 
 			doc.append(kvp(it->first, bsoncxx::types::b_int32{boost::get<int32_t>(it->second.second)} ));
 		}
 		else if(it->second.first == MONGODB_INT64)
@@ -123,28 +123,18 @@ void CNFMongo::buildDoc(MONGODB_RECORD_DATA mapData,  bsoncxx::builder::basic::d
 			doc.append(kvp(it->first, bsoncxx::types::b_int64{boost::get<int64_t>(it->second.second)} ));
 		}
 		else if(it->second.first == MONGODB_DOUBLE)
-		{
+		{ 
 			doc.append(kvp(it->first, bsoncxx::types::b_double{boost::get<double>(it->second.second)} ));
 		}
 		else if(it->second.first == MONGODB_STRING)
-		{
+		{ 
 			doc.append(kvp(it->first, boost::get<string>(it->second.second)));
 		}
 	}
 }
 
-void CNFMongo::buildIndexDoc(MONGODB_RECORD_DATA mapData,  bsoncxx::builder::basic::document &doc)
-{
-	MONGODB_RECORD_DATA::iterator itEnd = mapData.end();
-	for(MONGODB_RECORD_DATA::iterator it=mapData.begin(); it != itEnd; it++)
-	{
-		doc.append(kvp(it->first, -1));
-	}
-}
-
 int CNFMongo::UpdateRecord(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData, const MONGODB_RECORD_DATA &mapFilter)
 {
-
 	try
 	{
 		mongocxx::stdx::optional<mongocxx::pool::entry> client;
@@ -157,7 +147,7 @@ int CNFMongo::UpdateRecord(const string &strAreaDb, const string &collection, co
 
 		mongocxx::client &conn = **client;
 		mongocxx::collection coll = conn[strAreaDb][collection];
-		bsoncxx::builder::basic::document doc,docIndex,docFilter;
+		bsoncxx::builder::basic::document doc,docFilter;
 
 		using bsoncxx::builder::basic::kvp;
 		buildDoc(mapData, doc);  
@@ -171,14 +161,15 @@ int CNFMongo::UpdateRecord(const string &strAreaDb, const string &collection, co
 			LOG_ERROR << "update failed | docvalue=" <<  bsoncxx::to_json(doc.view()) << endl;
 			return -1;
 		} 
-		buildIndexDoc(mapData, docIndex);
-		mongocxx::options::index opIndex;
-		opIndex.background(true);
-		coll.create_index(docIndex.view(), opIndex);
 	}
 	catch(mongocxx::exception &e)
 	{
 		LOG_ERROR << e.what() << endl;
+		return -1;
+	}
+	catch (exception &ex)
+	{
+		LOG_ERROR << "[exception]:" << ex.what() << endl;
 		return -1;
 	}
 	catch(...)
@@ -205,7 +196,7 @@ int CNFMongo::InsertRecord(const string &strAreaDb, const string &collection, co
 
 		mongocxx::client &conn = **client;
 		mongocxx::collection coll = conn[strAreaDb][collection];
-		bsoncxx::builder::basic::document doc,docIndex;
+		bsoncxx::builder::basic::document doc;
 
 		using bsoncxx::builder::basic::kvp;
 		buildDoc(mapData, doc);
@@ -215,15 +206,15 @@ int CNFMongo::InsertRecord(const string &strAreaDb, const string &collection, co
 			LOG_ERROR << "insert failed | docvalue=" <<  bsoncxx::to_json(doc.view()) << endl;
 			return -1;
 		}
-
-		buildIndexDoc( mapData, docIndex);
-		mongocxx::options::index opIndex;
-		opIndex.background(true);
-		coll.create_index(docIndex.view(), opIndex);
 	}
 	catch(mongocxx::exception &e)
 	{
 		LOG_ERROR << e.what() << '\n';
+		return -1;
+	}
+	catch (exception &ex)
+	{
+		LOG_ERROR << "[exception]:" << ex.what() << endl;
 		return -1;
 	}
 	catch(...)
@@ -233,3 +224,87 @@ int CNFMongo::InsertRecord(const string &strAreaDb, const string &collection, co
 	}
 	return 0;
 }
+
+
+int CNFMongo::BuildSingleIndex(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData)
+{
+	try
+	{
+		mongocxx::stdx::optional<mongocxx::pool::entry> client;
+		bool ret = try_get_client(client);
+		if(!ret || !client)
+		{
+			LOG_ERROR << "get client failed " << endl;
+			return -1;
+		}
+
+		mongocxx::client &conn = **client;
+		mongocxx::collection coll = conn[strAreaDb][collection];
+
+		using bsoncxx::builder::basic::kvp;
+		mongocxx::options::index opIndex;
+		opIndex.background(true);
+
+		MONGODB_RECORD_DATA::iterator itEnd = mapData.end();
+		for(MONGODB_RECORD_DATA::iterator it=mapData.begin(); it != itEnd; it++)
+		{
+			bsoncxx::builder::basic::document doc;
+			doc.append(kvp(it->first, -1));
+			coll.create_index(doc.view(), opIndex);
+		}	
+	}
+	catch(mongocxx::exception &e)
+	{
+		LOG_ERROR << e.what() << '\n';
+		return -1;
+	}
+	catch (exception &ex)
+	{
+		LOG_ERROR << "[exception]:" << ex.what() << endl;
+		return -1;
+	}
+	catch(...)
+	{
+		LOG_ERROR << "unknown exception" << endl;
+		return -1;
+	}
+	return 0;
+}
+
+int CNFMongo::FindRecord(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData ,mongocxx::cursor &cursor)
+{
+	try
+	{
+		mongocxx::stdx::optional<mongocxx::pool::entry> client;
+		bool ret = try_get_client(client);
+		if(!ret || !client)
+		{
+			LOG_ERROR << "get client failed " << endl;
+			return -1;
+		}
+
+		mongocxx::client &conn = **client;
+		mongocxx::collection coll = conn[strAreaDb][collection];
+
+		bsoncxx::builder::basic::document doc;
+		buildDoc(mapData, doc);
+		cursor = coll.find(doc.view());
+	}
+	catch(mongocxx::exception &e)
+	{
+		LOG_ERROR << e.what() << '\n';
+		return -1;
+	}
+	catch (exception &ex)
+	{
+		LOG_ERROR << "[exception]:" << ex.what() << endl;
+		return -1;
+	}
+	catch(...)
+	{
+		LOG_ERROR << "unknown exception" << endl;
+		return -1;
+	}
+	return 0;
+}
+
