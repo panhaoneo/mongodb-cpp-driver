@@ -109,7 +109,7 @@ bool CNFMongo::try_get_client(mongocxx::stdx::optional<mongocxx::pool::entry>& d
 }
 
 
-void CNFMongo::buildDoc(const MONGODB_RECORD_DATA& mapData,  bsoncxx::builder::basic::document &doc)
+void CNFMongo::buildDoc(MONGODB_RECORD_DATA& mapData,  bsoncxx::builder::basic::document &doc)
 {
 	MONGODB_RECORD_DATA::iterator itEnd = mapData.end();
 	for(MONGODB_RECORD_DATA::iterator it=mapData.begin(); it != itEnd; it++)
@@ -133,7 +133,7 @@ void CNFMongo::buildDoc(const MONGODB_RECORD_DATA& mapData,  bsoncxx::builder::b
 	}
 }
 
-int CNFMongo::UpdateRecord(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData, const MONGODB_RECORD_DATA &mapFilter)
+int CNFMongo::UpdateRecord(const string &strAreaDb, const string &collection, MONGODB_RECORD_DATA &mapData, MONGODB_RECORD_DATA &mapFilter)
 {
 	try
 	{
@@ -147,15 +147,16 @@ int CNFMongo::UpdateRecord(const string &strAreaDb, const string &collection, co
 
 		mongocxx::client &conn = **client;
 		mongocxx::collection coll = conn[strAreaDb][collection];
-		bsoncxx::builder::basic::document doc,docFilter;
+		bsoncxx::builder::basic::document doc,docFilter,docUpdate;
 
 		using bsoncxx::builder::basic::kvp;
 		buildDoc(mapData, doc);  
 		buildDoc(mapFilter, docFilter);
+		docUpdate.append(kvp("$set", doc.view())); // mongodb update issue: ref[https://www.cnblogs.com/meitian/p/4623239.html]
 
 		mongocxx::options::update opUpdate;
 		opUpdate.upsert(true); 
-		auto result = coll.update_one(docFilter.view(), doc.view(), opUpdate);
+		auto result = coll.update_one(docFilter.view(), docUpdate.view(), opUpdate);
 		if(!result)
 		{
 			LOG_ERROR << "update failed | docvalue=" <<  bsoncxx::to_json(doc.view()) << endl;
@@ -182,7 +183,7 @@ int CNFMongo::UpdateRecord(const string &strAreaDb, const string &collection, co
 }
 
 
-int CNFMongo::InsertRecord(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData)
+int CNFMongo::InsertRecord(const string &strAreaDb, const string &collection, MONGODB_RECORD_DATA &mapData)
 {
 	try
 	{
@@ -226,7 +227,7 @@ int CNFMongo::InsertRecord(const string &strAreaDb, const string &collection, co
 }
 
 
-int CNFMongo::BuildSingleIndex(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData)
+int CNFMongo::BuildSingleIndex(const string &strAreaDb, const string &collection, MONGODB_RECORD_DATA &mapData)
 {
 	try
 	{
@@ -271,7 +272,7 @@ int CNFMongo::BuildSingleIndex(const string &strAreaDb, const string &collection
 	return 0;
 }
 
-int CNFMongo::FindRecord(const string &strAreaDb, const string &collection, const MONGODB_RECORD_DATA &mapData ,mongocxx::cursor &cursor)
+int CNFMongo::FindRecord(const string &strAreaDb, const string &collection, MONGODB_RECORD_DATA &mapData ,mongocxx::cursor &cursor)
 {
 	try
 	{
