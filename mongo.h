@@ -127,7 +127,7 @@ public:
     * 
     * @return 0-正常  -1-异常
     */
-    int BuildSingleIndex(const string &strAreaDb, const string &collection, MONGODB_RECORD_DATA &mapData);
+    int BuildSingleIndex(const string &strAreaDb, const string &collection, vector<string> & vIndex);
 
       /**
     * @brief 简单doc查找
