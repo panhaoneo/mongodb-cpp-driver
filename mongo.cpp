@@ -227,7 +227,7 @@ int CNFMongo::InsertRecord(const string &strAreaDb, const string &collection, MO
 }
 
 
-int CNFMongo::BuildSingleIndex(const string &strAreaDb, const string &collection, MONGODB_RECORD_DATA &mapData)
+int CNFMongo::BuildSingleIndex(const string &strAreaDb, const string &collection, vector<string> &vIndex)
 {
 	try
 	{
@@ -246,11 +246,11 @@ int CNFMongo::BuildSingleIndex(const string &strAreaDb, const string &collection
 		mongocxx::options::index opIndex;
 		opIndex.background(true);
 
-		MONGODB_RECORD_DATA::iterator itEnd = mapData.end();
-		for(MONGODB_RECORD_DATA::iterator it=mapData.begin(); it != itEnd; it++)
+		size_t iSize = vIndex.size();
+		for(int i=0; i<iSize; ++i)
 		{
 			bsoncxx::builder::basic::document doc;
-			doc.append(kvp(it->first, -1));
+			doc.append(kvp(vIndex[i], -1));
 			coll.create_index(doc.view(), opIndex);
 		}	
 	}
