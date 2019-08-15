@@ -1,10 +1,10 @@
-#include "MongoTest.h"
+#include "Mongo.h"
 #include <iostream>
 
 
 #define KEY_CODE		"code"
 #define KEY_DATE		"date"
-#define KEY_FIELDNAME	"fieldname"
+#define KEY_FIELDNAME		"fieldname"
 #define KEY_VALUE		"value"
 
 int getRand()
@@ -27,7 +27,7 @@ struct FactorMessage{
 
 int main()
 {
-	string strConfigFile =  "MongoTest.conf";
+	string strConfigFile =  "Mongo.conf";
 	cout  << "init config: " << strConfigFile << endl;
 	TC_Config config;
 	config.parseFile(strConfigFile);
@@ -40,7 +40,7 @@ int main()
 	FactorMessage msg;
 	msg._iDate = 20190724;
 	msg._iDecimal = 1;
-	msg._strArea = string("SHSZADB");
+	msg._strArea = string("TestDB");
 	msg._strCode = string(I2S(getRand()));
 	msg._strCollection = string("testCollection");
 	msg._strfieldname = string("open") ;
