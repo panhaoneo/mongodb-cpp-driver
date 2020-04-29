@@ -9,9 +9,9 @@ C++在数据库驱动方面可以考虑学习下java的jdbc接口标准，数据
 - 封装常用操作接口：insert，update，find
 
 # 待做项
-[ - ] 学习jdbc接口标准，看是否合适C++实现一套。在现有的driver基础上做一个标准。
-[ - ] 扩展mongo的find接口，准备使用json（jsoncpp）来构造doc进行多元化查找。
-[ - ] 性能优化：链接池可以复用。
+- 学习jdbc接口标准，看是否合适C++实现一套。在现有的driver基础上做一个标准。
+- 扩展mongo的find接口，准备使用json（jsoncpp）来构造doc进行多元化查找。
+- 性能优化：链接池可以复用。
 
 # 总结博文系列
 1. bson 数据
